@@ -21,6 +21,10 @@ class FatTreeTopo(Topo):
     """
     def __init__(self,coreSwitch=4,pods=4,agpp=2,egpp=2,hpe=2,**opts):
         Topo.__init__(self, **opts)
+        """define Protocol"""
+        protocal = 'OpenFlow13'
+        """define controller"""
+        crtl = c0
         """define Links types"""
         linkopts100M = dict(bw=100, delay='0ms', loss=0)
         linkopts1G = dict(bw=1000, delay='0ms', loss=5)
@@ -28,18 +32,20 @@ class FatTreeTopo(Topo):
         info('*** Adding Core Switches')
         for cs in range(coreSwitch):
             sw = self.addSwitch('cs%s'%(cs),
-                                    controller=c0,
-                                    protocols='OpenFlow13')
+                                    controller=crtl,
+                                    protocols=protocal)
         info('*** Adding Pod Switches')
         for pod in range(pods):
             for ag in range(agpp):
                 sw = self.addSwitch('p%sa%s'%(pod, ag),
-                                        controller=c0,
-                                        protocols='OpenFlow13')
+                                        controller=crtl,
+                                        protocols=protocal)
             for eg in range(egpp):
                 sw = self.addSwitch('p%se%s'%(pod, eg),
-                                        controller=c0,
-                                        protocols='OpenFlow13')
+                                        controller=crtl,
+                                        protocols=protocal)
+                for ag in range(agpp):
+                    link = self.addLink('p%se%s'%(pod, eg),'p%sa%s'%(pod, ag)
                 for h in range(hpe):
                     host = self.addHost('p%se%sh%s' %(pod, eg, h))
                     link = self.addLink('p%se%s' %(pod, eg),
