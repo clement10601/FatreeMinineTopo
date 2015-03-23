@@ -33,19 +33,40 @@ class FatTreeTopo(Topo):
         for cs in range(coreSwitch):
             sw = self.addSwitch('cs%s'%(cs),
                                     controller=crtl,
-                                    protocols=protocal)
+                                    protocols=protocal,
+                                    stp=True)
         info('*** Adding Pod Switches')
         for pod in range(pods):
+            """Add aggregation switches"""
             for ag in range(agpp):
                 sw = self.addSwitch('p%sa%s'%(pod, ag),
                                         controller=crtl,
-                                        protocols=protocal)
+                                        protocols=protocal,
+                                        stp=True)
+                """Add Link between core switches and Aggregation switches"""
+            for cs in range(0,coreSwitch/agpp):
+                for ra in range(0,agpp/2):
+                    link = self.addLink('cs%s'%(cs),
+                                        'p%sa%s'%(pod,ra),
+                                        **linkopts1G)
+            for cs in range(coreSwitch/agpp,coreSwitch):
+                for ra in range(agpp/2,agpp):
+                    link = self.addLink('cs%s'%(cs),
+                                        'p%sa%s'%(pod, ra),
+                                        **linkopts1G)
+            """Add edge switches"""
             for eg in range(egpp):
                 sw = self.addSwitch('p%se%s'%(pod, eg),
                                         controller=crtl,
-                                        protocols=protocal)
+                                        protocols=protocal,
+                                        stp=True)
+                """Add Link between Edge switches and Aggregation switches"""
                 for ag in range(agpp):
-                    link = self.addLink('p%se%s'%(pod, eg),'p%sa%s'%(pod, ag)
+                    link = self.addLink('p%se%s'%(pod, eg),
+                                        'p%sa%s'%(pod, ag),
+                                        **linkopts100M)
+                """Add Hosts per Edge switche"""
+                """Add Link between Hosts and Edge switches"""
                 for h in range(hpe):
                     host = self.addHost('p%se%sh%s' %(pod, eg, h))
                     link = self.addLink('p%se%s' %(pod, eg),
