@@ -22,7 +22,7 @@ class FatTreeTopo(Topo):
     def __init__(self,coreSwitch=4,pods=4,agpp=2,egpp=2,hpe=2,**opts):
         Topo.__init__(self, **opts)
         """define Protocol"""
-        protocal = 'OpenFlow13'
+        protocal = 'OpenFlow10'
         """define controller"""
         crtl = c0
         """define Links types"""
@@ -43,7 +43,7 @@ class FatTreeTopo(Topo):
                                         controller=crtl,
                                         protocols=protocal,
                                         stp=True)
-                """Add Link between core switches and Aggregation switches"""
+            """Add Link between core switches and Aggregation switches"""
             for cs in range(0,coreSwitch/agpp):
                 for ra in range(0,agpp/2):
                     link = self.addLink('cs%s'%(cs),
@@ -82,6 +82,7 @@ def simTest():
     ryu_ctl = net.addController('c0',
                                 controller=RemoteController,
                                 ip='127.0.0.1', port=6633)
+
 
     net.build()
     print "NET BUILD"
