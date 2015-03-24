@@ -38,33 +38,44 @@ class FatTreeTopo(Topo):
 
     def topoCreate(self,coreSwitch,pods,agpp,egpp,hpe,**opts):
         info('Building Topo')
-        coreSW = self.addCoreSwitch(coreSwitch)
+        self.coreSW = self.addCoreSwitch(coreSwitch)
         for pod in range(pods):
             self.aggSW.append(self.addAggregationSwitch(pod,agpp))
-            self.eggSW.append(self.addEdgeSwitch(pod,egpp))
+            self.eggSW.append(self.addEdgeSwitch(pod,agpp,egpp))
             for ew in range(egpp):
                 self.hList.append(self.addFatHost(pod,ew,hpe))
-
 
     def addCoreSwitch(self,num):
         info('Adding Core Switch')
         CoreSwitch = []
         for n in range(num):
-            CoreSwitch.append(self.addSwitch('Core%s'%(n)))
+            CoreSwitch.append(self.addSwitch('Core%s'%(n),
+                                             protocols=self.protocal))
         return CoreSwitch
 
     def addAggregationSwitch(self,pod,num):
         info('Adding Aggregation Switch')
         AggregationSwitch = []
         for n in range(num):
-            AggregationSwitch.append(self.addSwitch('p%sa%s'%(pod,n)))
+            AggregationSwitch.append(self.addSwitch('p%sa%s'%(pod,n),
+                                                    protocols=self.protocal))
+            if n == 0:
+                self.addLink('p%sa%s'%(pod,n),'Core0',**self.linkopts1G)
+                self.addLink('p%sa%s'%(pod,n),'Core1',**self.linkopts1G)
+            else:
+                self.addLink('p%sa%s'%(pod,n),'Core2',**self.linkopts1G)
+                self.addLink('p%sa%s'%(pod,n),'Core3',**self.linkopts1G)
         return AggregationSwitch
 
-    def addEdgeSwitch(self,pod,num):
+    def addEdgeSwitch(self,pod,agpp,num):
         info('Adding Edge Switch')
         EdgeSwitch = []
         for n in range(num):
-            EdgeSwitch.append(self.addSwitch('p%se%s'%(pod,n)))
+            EdgeSwitch.append(self.addSwitch('p%se%s'%(pod,n),
+                                             protocols=self.protocal))
+            for a in range(agpp):
+                self.addLink('p%se%s'%(pod,n),'p%sa%s'%(pod,a))
+
         return EdgeSwitch
 
     def addFatHost(self,pod,edge,num):
