@@ -6,103 +6,100 @@ from mininet.node import RemoteController
 from mininet.util import dumpNodeConnections
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
+import os
 
-formatter = "%r"
-block = "####################"
-c0 = RemoteController('c0', ip='127.0.0.1', port=6633)
 class FatTreeTopo(Topo):
+    info('CreatFatTreeTopo')
+    """define Protocol"""
+    protocal = 'OpenFlow13'
+    """define controller"""
+    crtlname = 'crtl0'
+    crtlip ='127.0.0.1'
+    crtlport = 6653
+    crtl = RemoteController(crtlname, ip=crtlip, port=crtlport)
+    """define Links types"""
+    linkopts100M = dict(bw=100, delay='0ms', loss=0)
+    linkopts1G = dict(bw=1000, delay='0ms', loss=5)
+    coreSW = []
+    aggSW = []
+    eggSW = []
+    hList = []
     """
     coreSwitch: Fat Free Topology Cores
     pods: group of switches that contain
-          several aggregation switches and edge switches
+    several aggregation switches and edge switches
     agpp: aggregation switches per pod
     egpp: edge switches per pod
-    hpe:  hosts per edge
+    hpe: hosts per edge
     """
-    def __init__(self,coreSwitch=4,pods=4,agpp=2,egpp=2,hpe=2,**opts):
-        Topo.__init__(self, **opts)
-        """define Protocol"""
-        protocal = 'OpenFlow10'
-        """define controller"""
-        crtl = c0
-        """define Links types"""
-        linkopts100M = dict(bw=100, delay='0ms', loss=0)
-        linkopts1G = dict(bw=1000, delay='0ms', loss=5)
+    def __init__(self):
+        info('FTT Init')
+        Topo.__init__(self)
 
-        info('*** Adding Core Switches')
-        for cs in range(coreSwitch):
-            sw = self.addSwitch('cs%s'%(cs),
-                                    controller=crtl,
-                                    protocols=protocal,
-                                    stp=True)
-        info('*** Adding Pod Switches')
+    def topoCreate(self,coreSwitch,pods,agpp,egpp,hpe,**opts):
+        info('Building Topo')
+        coreSW = self.addCoreSwitch(coreSwitch)
         for pod in range(pods):
-            """Add aggregation switches"""
-            for ag in range(agpp):
-                sw = self.addSwitch('p%sa%s'%(pod, ag),
-                                        controller=crtl,
-                                        protocols=protocal,
-                                        stp=True)
-            """Add Link between core switches and Aggregation switches"""
-            for cs in range(0,coreSwitch/agpp):
-                for ra in range(0,agpp/2):
-                    link = self.addLink('cs%s'%(cs),
-                                        'p%sa%s'%(pod,ra),
-                                        **linkopts1G)
-            for cs in range(coreSwitch/agpp,coreSwitch):
-                for ra in range(agpp/2,agpp):
-                    link = self.addLink('cs%s'%(cs),
-                                        'p%sa%s'%(pod, ra),
-                                        **linkopts1G)
-            """Add edge switches"""
-            for eg in range(egpp):
-                sw = self.addSwitch('p%se%s'%(pod, eg),
-                                        controller=crtl,
-                                        protocols=protocal,
-                                        stp=True)
-                """Add Link between Edge switches and Aggregation switches"""
-                for ag in range(agpp):
-                    link = self.addLink('p%se%s'%(pod, eg),
-                                        'p%sa%s'%(pod, ag),
-                                        **linkopts100M)
-                """Add Hosts per Edge switche"""
-                """Add Link between Hosts and Edge switches"""
-                for h in range(hpe):
-                    host = self.addHost('p%se%sh%s' %(pod, eg, h))
-                    link = self.addLink('p%se%s' %(pod, eg),
-                                        'p%se%sh%s' %(pod, eg, h),
-                                        **linkopts100M)
-    def LinkCoreAg():
-        print("Hey")
+            self.aggSW.append(self.addAggregationSwitch(pod,agpp))
+            self.eggSW.append(self.addEdgeSwitch(pod,egpp))
+            for ew in range(egpp):
+                self.hList.append(self.addFatHost(pod,ew,hpe))
 
 
-def simTest():
+    def addCoreSwitch(self,num):
+        info('Adding Core Switch')
+        CoreSwitch = []
+        for n in range(num):
+            CoreSwitch.append(self.addSwitch('Core%s'%(n)))
+        return CoreSwitch
+
+    def addAggregationSwitch(self,pod,num):
+        info('Adding Aggregation Switch')
+        AggregationSwitch = []
+        for n in range(num):
+            AggregationSwitch.append(self.addSwitch('p%sa%s'%(pod,n)))
+        return AggregationSwitch
+
+    def addEdgeSwitch(self,pod,num):
+        info('Adding Edge Switch')
+        EdgeSwitch = []
+        for n in range(num):
+            EdgeSwitch.append(self.addSwitch('p%se%s'%(pod,n)))
+        return EdgeSwitch
+
+    def addFatHost(self,pod,edge,num):
+        info('Adding Host')
+        host = []
+        for n in range(num):
+            host.append(self.addHost('p%se%sh%s'%(pod,edge,n)))
+        return host
+
+    def addFatLinks(self,target1,target2,linktype):
+        info('Adding Links')
+
+def RunTest():
+    """TOPO"""
     topo = FatTreeTopo()
-    net = Mininet(topo=topo,link=TCLink,controller=None,build=False)
-    ryu_ctl = net.addController('c0',
-                                controller=RemoteController,
-                                ip='127.0.0.1', port=6633)
+    topo.topoCreate(4,4,2,2,2)
 
+    CONTROLLER_NAME = topo.crtlname
+    CONTROLLER_IP = topo.crtlip
+    CONTROLLER_PORT = topo.crtlport
+    net = Mininet(topo=topo, link=TCLink, controller=None)
+    net.addController( CONTROLLER_NAME,controller=RemoteController,
+                      ip=CONTROLLER_IP,
+                      port=CONTROLLER_PORT)
 
-    net.build()
-    print "NET BUILD"
     net.start()
-    print "NET START"
-    print formatter % (block)
-    print "Dumping host connections"
-    print formatter % (block)
-    dumpNodeConnections(net.hosts)
-    print formatter % (block)
-    print "Testing network connectivity"
-    print formatter % (block)
-    net.pingAll()
-    print formatter % (block)
-    print "network CLI"
-    print formatter % (block)
+    #dumpNodeConnections(net.hosts)
+    #net.pingAll()
     CLI(net)
     net.stop()
 
 if __name__ == '__main__':
     # Tell mininet to print useful information
     setLogLevel('info')
-    simTest()
+    if os.getuid() != 0:
+        info("You are NOT root")
+    elif os.getuid() == 0:
+        RunTest()
