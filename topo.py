@@ -6,7 +6,7 @@ from mininet.node import RemoteController
 from mininet.util import dumpNodeConnections
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
-import os
+import os, time
 
 class FatTreeTopo(Topo):
     info('CreatFatTreeTopo')
@@ -15,11 +15,11 @@ class FatTreeTopo(Topo):
     """define controller"""
     crtlname = 'crtl0'
     crtlip ='127.0.0.1'
-    crtlport = 6653
+    crtlport = 6633
     crtl = RemoteController(crtlname, ip=crtlip, port=crtlport)
     """define Links types"""
     linkopts100M = dict(bw=100, delay='0ms', loss=0)
-    linkopts1G = dict(bw=1000, delay='0ms', loss=5)
+    linkopts1G = dict(bw=1000, delay='0ms', loss=0)
     coreSW = []
     aggSW = []
     eggSW = []
@@ -49,7 +49,7 @@ class FatTreeTopo(Topo):
         info('Adding Core Switch')
         CoreSwitch = []
         for n in range(num):
-            CoreSwitch.append(self.addSwitch('Core%s'%(n),
+            CoreSwitch.append(self.addSwitch('c%s'%(n),
                                              protocols=self.protocal))
         return CoreSwitch
 
@@ -57,24 +57,24 @@ class FatTreeTopo(Topo):
         info('Adding Aggregation Switch')
         AggregationSwitch = []
         for n in range(num):
-            AggregationSwitch.append(self.addSwitch('p%sa%s'%(pod,n),
+            AggregationSwitch.append(self.addSwitch('s1%s%s'%(pod,n),
                                                     protocols=self.protocal))
             if n == 0:
-                self.addLink('p%sa%s'%(pod,n),'Core0',**self.linkopts1G)
-                self.addLink('p%sa%s'%(pod,n),'Core1',**self.linkopts1G)
+                self.addLink('s1%s%s'%(pod,n),'c0',**self.linkopts1G)
+                self.addLink('s1%s%s'%(pod,n),'c1',**self.linkopts1G)
             else:
-                self.addLink('p%sa%s'%(pod,n),'Core2',**self.linkopts1G)
-                self.addLink('p%sa%s'%(pod,n),'Core3',**self.linkopts1G)
+                self.addLink('s1%s%s'%(pod,n),'c2',**self.linkopts1G)
+                self.addLink('s1%s%s'%(pod,n),'c3',**self.linkopts1G)
         return AggregationSwitch
 
     def addEdgeSwitch(self,pod,agpp,num):
         info('Adding Edge Switch')
         EdgeSwitch = []
         for n in range(num):
-            EdgeSwitch.append(self.addSwitch('p%se%s'%(pod,n),
+            EdgeSwitch.append(self.addSwitch('s2%s%s'%(pod,n),
                                              protocols=self.protocal))
             for a in range(agpp):
-                self.addLink('p%se%s'%(pod,n),'p%sa%s'%(pod,a))
+                self.addLink('s2%s%s'%(pod,n),'s1%s%s'%(pod,a))
 
         return EdgeSwitch
 
@@ -82,7 +82,8 @@ class FatTreeTopo(Topo):
         info('Adding Host')
         host = []
         for n in range(num):
-            host.append(self.addHost('p%se%sh%s'%(pod,edge,n)))
+            host.append(self.addHost('h%s%s%s'%(pod,edge,n)))
+            self.addLink('h%s%s%s'%(pod,edge,n),'s2%s%s'%(pod,n))
         return host
 
     def addFatLinks(self,target1,target2,linktype):
@@ -96,7 +97,8 @@ def RunTest():
     CONTROLLER_NAME = topo.crtlname
     CONTROLLER_IP = topo.crtlip
     CONTROLLER_PORT = topo.crtlport
-    net = Mininet(topo=topo, link=TCLink, controller=None)
+    net = Mininet(topo=topo,build= False,link=TCLink, controller=None)
+    time.sleep(1)
     net.addController( CONTROLLER_NAME,controller=RemoteController,
                       ip=CONTROLLER_IP,
                       port=CONTROLLER_PORT)
