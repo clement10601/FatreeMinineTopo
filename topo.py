@@ -15,7 +15,7 @@ class FatTreeTopo(Topo):
     """define controller"""
     crtlname = 'crtl0'
     crtlip ='127.0.0.1'
-    crtlport = 6633
+    crtlport = 6653
     crtl = RemoteController(crtlname, ip=crtlip, port=crtlport)
     """define Links types"""
     linkopts100M = dict(bw=100, delay='0ms', loss=0)
@@ -104,8 +104,15 @@ def RunTest():
                       port=CONTROLLER_PORT)
 
     net.start()
-    #dumpNodeConnections(net.hosts)
-    #net.pingAll()
+    dumpNodeConnections(net.hosts)
+    net.pingAll()
+    h1 = net.get('h000')
+    h16 = net.get('h311')
+    h2 = net.get('h001')
+    h1.popen('iperf -s -u -i 1')
+    h16.popen('iperf -s -u -i 1')
+    h2.cmdPrint('iperf -c '+ h1.IP() + ' -u -t 10 -i 1 -b 100m')
+    h2.cmdPrint('iperf -c '+ h16.IP() + ' -u -t 10 -i 1 -b 100m')
     CLI(net)
     net.stop()
 
