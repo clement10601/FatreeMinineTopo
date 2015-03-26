@@ -24,6 +24,7 @@ class FatTreeTopo(Topo):
     aggSW = []
     eggSW = []
     hList = []
+    pods = 2
     """
     coreSwitch: Fat Free Topology Cores
     pods: group of switches that contain
@@ -38,6 +39,7 @@ class FatTreeTopo(Topo):
 
     def topoCreate(self,coreSwitch,pods,agpp,egpp,hpe,**opts):
         info('Building Topo')
+        self.pods = pods
         self.coreSW = self.addCoreSwitch(coreSwitch)
         for pod in range(pods):
             self.aggSW.append(self.addAggregationSwitch(pod,agpp))
@@ -55,16 +57,17 @@ class FatTreeTopo(Topo):
 
     def addAggregationSwitch(self,pod,num):
         info('Adding Aggregation Switch')
+
         AggregationSwitch = []
         for n in range(num):
             AggregationSwitch.append(self.addSwitch('s1%s%s'%(pod,n),
                                                     protocols=self.protocal))
-            if n == 0:
-                self.addLink('s1%s%s'%(pod,n),'c0',**self.linkopts1G)
-                self.addLink('s1%s%s'%(pod,n),'c1',**self.linkopts1G)
+            if n <= int(num/self.pods):
+                for p in range(0,int(self.pods/2)):
+                    self.addLink('s1%s%s'%(pod,n),'c%s'%(p),**self.linkopts1G)
             else:
-                self.addLink('s1%s%s'%(pod,n),'c2',**self.linkopts1G)
-                self.addLink('s1%s%s'%(pod,n),'c3',**self.linkopts1G)
+                for p in range(int(pod/2),pod):
+                    self.addLink('s1%s%s'%(pod,n),'c%s'%(p),**self.linkopts1G)
         return AggregationSwitch
 
     def addEdgeSwitch(self,pod,agpp,num):
